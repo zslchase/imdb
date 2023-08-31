@@ -45,15 +45,25 @@ def train(net,train_iter,test_iter,optimizer,num_epochs,device):
         train_l=train_l_sum/idx
         print("epoch:{},train loss:{},train acc:{},test acc:{}".format(epoch+1,train_l,train_acc,test_acc))
 train_iter,test_iter,vocab=get_data_iter()
+
+
 ##网络实例化
-embsize,num_hiddens,num_layers=100,100,2
-net=BiRNN(len(vocab),embsize,num_hiddens,num_layers)
+embed_size, kernel_sizes, nums_channels = 100, [3, 4, 5], [100, 100, 100]
+devices = 'cuda:0'
+net = TextCNN(len(vocab), embed_size, kernel_sizes, nums_channels)
+def init_weights(m):
+    if type(m) in (nn.Linear, nn.Conv1d):
+        nn.init.xavier_uniform_(m.weight)
+
+net.apply(init_weights)
+
 ##读取预训练权重
 embeddings_dict=glove()
 embed=load_pretrained_embedding(vocab.get_itos(),embeddings_dict)
 net.embedding.weight.data.copy_(embed)
 net.embedding.weight.requires_grad=False
 
-lr,num_epochs=0.01,10
-optimizer=torch.optim.Adam(filter(lambda p:p.requires_grad,net.parameters()),lr=lr)
-train(net,train_iter,test_iter,optimizer,num_epochs,'cuda:0')
+lr, num_epochs = 0.001, 10
+trainer = torch.optim.Adam(net.parameters(), lr=lr)
+loss = nn.CrossEntropyLoss(reduction="none")
+train(net, train_iter, test_iter,trainer,num_epochs,devices)
