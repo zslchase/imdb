@@ -12,21 +12,14 @@ import numpy as np
 cache_dir='./output/cache'
 data_path='./data'
 def read_imdb(type_):
-    if os.path.exists(os.path.join(cache_dir,f'{type_}.pkl')):
-        print('Cache found')
-        with open(os.path.join(cache_dir,f'{type_}.pkl'),'rb') as f:
-            data=pickle.load(f)
-        return data
     data=[]
     for label in ['pos','neg']:
         folder_name=os.path.join(data_path,type_,label)
         for file in tqdm(os.listdir(folder_name)):
             with open(os.path.join(folder_name,file),'r',encoding='utf-8') as f:
                 review=f.read().replace('\n',' ').lower()
-                review=text_sub(review)
                 data.append((review,1 if label =='pos' else 0))
-    with open(os.path.join(cache_dir,f'{type_}.pkl'),'wb') as f:
-        pickle.dump(data,f)
+    return data
 def text_sub(text):
     text = re.sub(r'(@.*?)[\s]', ' ', text)
     text = re.sub(r'&amp;', '&', text)
@@ -47,6 +40,7 @@ def build_vocab(tokens):
     word_vocab=vocab(fre_dic,min_freq=2,specials=['[PAD]','[UNK]','[CLS]','[SEP]','[MASK]'])
     word_vocab.set_default_index(word_vocab['[UNK]'])
     return word_vocab
+
 class Mydataset(Dataset):
     def __init__(self,comments,label,masked_pos,masked_tokens):
         self.comments=torch.tensor(comments,dtype=torch.int32)

@@ -6,6 +6,7 @@ import re
 from random import *
 import numpy as np
 import torch.optim as optim
+from transformers import BertTokenizer,BertModel,AdamW
 #--------------------------BiRNN--------------------------------------------------
 class BiRNN(nn.Module):
     def __init__(self,vocab_size,embed_size,num_hiddens,num_layers):
@@ -217,7 +218,31 @@ class BERT(nn.Module):
         logits_lm = self.decoder(h_masked) + self.decoder_bias # [batch_size, max_pred, n_vocab]
 
         return logits_lm, logits_clsf
+#--------------------------bert(funetune)----------------------------------------------
+class BertClassification(nn.Module):
+    def __init__(self,freeze_bert=False):
+        super(BertClassification,self).__init__()
+        num_hiddens,h1,out=768,64,1
+        self.bert=BertModel.from_pretrained('./pre_bert')
+        self.classifier=nn.Sequential(
+            nn.Linear(num_hiddens,h1),
+            nn.ReLU(),
+            nn.Linear(h1,out)
+        )
+        self.freeze_bert = freeze_bert
+    def forward(self, input_ids, attention_mask):
+        # Feed input to BERT
+        if self.freeze_bert:
+            with torch.no_grad():
+                outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        else:
+            outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        # Extract the last hidden state of the token `[CLS]` for classification task
+        last_hidden_state_cls = outputs[0][:, 0, :]
 
+        output = torch.sigmoid(self.classifier(last_hidden_state_cls)).squeeze()
+
+        return output
 #--------------------------lstm--------------------------------------------------
 class lstm(nn.Module):
     def __init__(self,input_size,num_hiddens,batch_size,device):
