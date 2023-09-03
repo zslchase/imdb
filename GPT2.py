@@ -106,5 +106,6 @@ def test(model,data_iter, loss,device):
 num_epochs=4
 device='cuda:0'
 for epoch in range(num_epochs):
+    print("epoch:{}".format(epoch+1))
     train(model,train_dataloader,optimizer,loss,device)
     test(model,test_dataloader,loss,device)
