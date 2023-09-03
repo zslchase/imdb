@@ -217,3 +217,54 @@ class BERT(nn.Module):
         logits_lm = self.decoder(h_masked) + self.decoder_bias # [batch_size, max_pred, n_vocab]
 
         return logits_lm, logits_clsf
+
+#--------------------------lstm--------------------------------------------------
+class lstm(nn.Module):
+    def __init__(self,input_size,num_hiddens,batch_size,device):
+        super(lstm,self).__init__()
+        def Par():
+            return (nn.Linear(input_size,num_hiddens),
+                   nn.Linear(num_hiddens,num_hiddens))
+        torch.Tensor
+        self.W_xi,self.W_hi=Par() #输入门参数
+        self.W_xf,self.W_hf=Par() #遗忘门参数
+        self.W_xo,self.W_ho=Par() #输出门参数
+        self.W_xc,self.W_hc=Par() #候选记忆元参数
+
+        # #附加梯度
+        # self.parameters=self.W_xi,self.W_hi,self.b_i,self.W_xf,self.W_hf,self.b_f,self.W_xo,self.W_ho,self.b_o,self.W_xc,self.W_hc,self.b_c
+        self.batch_size=batch_size
+        self.num_hiddens=num_hiddens
+        self.device=device
+
+    def init_lstm_state(self):
+        return (torch.zeros((self.batch_size,self.num_hiddens),device=self.device), torch.zeros((self.batch_size,self.num_hiddens),device=self.device))
+    
+    def forward(self,inputs,state=None):
+        if state==None:
+            H,C=self.init_lstm_state()
+        else:
+            H,C=state
+        outputs=[]
+        for X in inputs:
+            I = torch.sigmoid(self.W_xi(X) + self.W_hi(H))
+            F = torch.sigmoid(self.W_xf(X) + self.W_hf(H))
+            O = torch.sigmoid(self.W_xo(X) + self.W_ho(H))
+            C_tilda = torch.tanh(self.W_xc(X) + self.W_hc(H))
+            C=F*C+I*C_tilda
+            outputs.append(H)
+        return outputs,(H,)
+    
+class mylstm(nn.Module):
+    def __init__(self,vocab_size,num_hiddens,embed_size,batch_size,device):
+       super(mylstm,self).__init__()
+       self.embedding=nn.Embedding(vocab_size,embed_size)
+       self.lstm=lstm(embed_size,num_hiddens,batch_size,device)
+       self.decoder=nn.Linear(num_hiddens,2)
+
+    def forward(self,X):
+        X_embed=self.embedding(X.permute(1,0))#X_embed：[seq_len x batch_size x emded_size]
+        outputs,(H,)=self.lstm(X_embed)#outputs：[seq_len x batch_size x num_hiddens]
+        encodings=outputs[-1]
+        outputs=self.decoder(encodings)
+        return outputs
