@@ -37,7 +37,7 @@ print("Begin training...")
 model=model.to(device)
 for epoch in range(num_epochs):
     l_loss_sum,num_iter=0,len(train_iter)
-    for input_ids,labels,masked_pos,masked_tokens in train_iter:
+    for input_ids,labels,masked_pos,masked_tokens in tqdm(train_iter,total=len(train_iter)):
         input_ids,labels,masked_pos,masked_tokens=input_ids.to(device),labels.to(device),masked_pos.to(device),masked_tokens.to(device)
         optimizer.zero_grad()
         logits_lm, logits_clsf = model(input_ids,  masked_pos)
@@ -45,6 +45,7 @@ for epoch in range(num_epochs):
         loss_lm = (loss_lm.float()).mean()
         loss_clsf = criterion(logits_clsf, labels) # for sentence classification
         loss = loss_lm + loss_clsf
+
         loss.backward()
         optimizer.step()
         l_loss_sum+=loss.item()
